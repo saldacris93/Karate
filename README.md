@@ -23,10 +23,7 @@ Aplicación web para el celular que genera **cotizaciones en PDF** y las compart
 
 ## Publicación (GitHub Pages)
 
-El repositorio incluye un workflow que publica la app automáticamente con cada push a `main`:
-
-1. En GitHub: **Settings → Pages → Source: GitHub Actions** (una sola vez).
-2. Cada push a `main` la publica en `https://<usuario>.github.io/cotizador-karate/`.
+Cada push a `main` se copia automáticamente a la rama `gh-pages` (workflow incluido), que GitHub Pages sirve en `https://saldacris93.github.io/Karate/`. No hay que configurar nada.
 
 ## Desarrollo local
 
