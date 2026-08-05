@@ -12,12 +12,12 @@ const K = {
   ultimoRespaldo: 'ck_ultimo_respaldo',
 };
 
-// Respaldo remoto: archivo JSON en este mismo repositorio, en una rama aparte
-// para que cada respaldo no vuelva a publicar el sitio.
+// Respaldo remoto: archivo JSON en un repositorio PRIVADO aparte, para que los
+// datos de los clientes no queden visibles en el repositorio público de la app.
+// Se escribe en la rama por defecto del repo.
 const RESPALDO = {
-  repo: 'saldacris93/Karate',
-  ruta: 'datos/respaldo.json',
-  rama: 'datos',
+  repo: 'saldacris93/karate-datos',
+  ruta: 'respaldo.json',
 };
 
 function leer(clave, porDefecto) {
@@ -681,7 +681,7 @@ const URL_RESPALDO = `https://api.github.com/repos/${RESPALDO.repo}/contents/${R
 
 async function subirRespaldo() {
   let sha;
-  const consulta = await fetch(`${URL_RESPALDO}?ref=${RESPALDO.rama}`, { headers: cabecerasGitHub() });
+  const consulta = await fetch(URL_RESPALDO, { headers: cabecerasGitHub() });
   if (consulta.status === 401) throw new Error('El token no es válido o ya venció');
   if (consulta.ok) sha = (await consulta.json()).sha;
 
@@ -691,13 +691,12 @@ async function subirRespaldo() {
     body: JSON.stringify({
       message: 'Respaldo del cotizador — ' + new Date().toLocaleString('es-CO'),
       content: aBase64(JSON.stringify(datosParaRespaldo(), null, 1)),
-      branch: RESPALDO.rama,
       ...(sha ? { sha } : {}),
     }),
   });
   if (respuesta.status === 401) throw new Error('El token no es válido o ya venció');
   if (respuesta.status === 403 || respuesta.status === 404) {
-    throw new Error('El token no tiene permiso de escritura sobre el repositorio Karate');
+    throw new Error('¿Existe el repositorio privado karate-datos y el token tiene acceso de escritura a él?');
   }
   if (!respuesta.ok) throw new Error('GitHub respondió ' + respuesta.status);
   localStorage.setItem(K.ultimoRespaldo, new Date().toISOString());
@@ -705,9 +704,9 @@ async function subirRespaldo() {
 }
 
 async function bajarRespaldo() {
-  const respuesta = await fetch(`${URL_RESPALDO}?ref=${RESPALDO.rama}`, { headers: cabecerasGitHub() });
+  const respuesta = await fetch(URL_RESPALDO, { headers: cabecerasGitHub() });
   if (respuesta.status === 401) throw new Error('El token no es válido o ya venció');
-  if (respuesta.status === 404) throw new Error('Todavía no hay ningún respaldo guardado');
+  if (respuesta.status === 404) throw new Error('No hay respaldo todavía (o el token no tiene acceso al repositorio karate-datos)');
   if (!respuesta.ok) throw new Error('GitHub respondió ' + respuesta.status);
   const cuerpo = await respuesta.json();
   return JSON.parse(deBase64(cuerpo.content));

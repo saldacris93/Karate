@@ -19,9 +19,7 @@ Aplicación web para el celular que genera **cotizaciones en PDF** y las compart
 4. En **🧾 Cotizar**: nombre del cliente, productos, y toca **Generar y compartir PDF**.
 5. Opcional: en el menú del navegador toca **"Agregar a pantalla de inicio"** para instalarla como app y usarla sin internet.
 
-> 📌 Los datos viven en el navegador del teléfono (localStorage). Para no perderlos, la app puede **respaldarlos en este mismo repositorio** (`datos/respaldo.json`, rama `datos`): en ⚙️ Negocio → "Respaldo en GitHub" pega un token *fine-grained* con permiso de Contents (Read and write) solo sobre este repo. Con el token puesto, cada cotización generada se respalda sola, y el botón "Restaurar" recupera todo en un teléfono nuevo. También hay exportar/importar a archivo, sin token.
->
-> ⚠️ El repositorio es público: el respaldo (incluidos nombres y teléfonos de clientes) queda visible para cualquiera.
+> 📌 Los datos viven en el navegador del teléfono (localStorage). Para no perderlos, la app los **respalda en el repositorio privado `karate-datos`** (archivo `respaldo.json`), así los datos de los clientes no quedan públicos. Configuración (una vez): crear ese repo privado y pegar en ⚙️ Negocio → "Respaldo en GitHub" un token *fine-grained* con permiso de Contents (Read and write) solo sobre `karate-datos` — las instrucciones completas están dentro de la app. Con el token puesto, cada cotización generada se respalda sola, y el botón "Restaurar" recupera todo en un teléfono nuevo. También hay exportar/importar a archivo, sin token.
 
 ## Publicación (GitHub Pages)
 

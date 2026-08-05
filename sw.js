@@ -1,5 +1,5 @@
 // Service Worker: deja la app disponible sin internet (cache-first con actualización en segundo plano).
-const CACHE = 'cotizador-v2';
+const CACHE = 'cotizador-v3';
 const ARCHIVOS = [
   '.',
   'index.html',
