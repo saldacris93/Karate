@@ -8,6 +8,16 @@ const K = {
   catalogo: 'ck_catalogo',
   historial: 'ck_historial',
   borrador: 'ck_borrador',
+  token: 'ck_token',
+  ultimoRespaldo: 'ck_ultimo_respaldo',
+};
+
+// Respaldo remoto: archivo JSON en este mismo repositorio, en una rama aparte
+// para que cada respaldo no vuelva a publicar el sitio.
+const RESPALDO = {
+  repo: 'saldacris93/Karate',
+  ruta: 'datos/respaldo.json',
+  rama: 'datos',
 };
 
 function leer(clave, porDefecto) {
@@ -266,6 +276,7 @@ function consolidar() {
   guardar(K.historial, historial);
   pintarHistorial();
   pintarFormulario();
+  respaldarAuto();
   return copia;
 }
 
@@ -633,6 +644,178 @@ function redimensionarLogo(archivo) {
   });
 }
 
+// ---------------------------------------------------------------- respaldo
+function datosParaRespaldo() {
+  return {
+    version: 1,
+    guardado: new Date().toISOString(),
+    config,           // el token NUNCA va aquí: vive en su propia clave
+    catalogo,
+    historial,
+  };
+}
+
+// btoa solo acepta latin1; convertimos UTF-8 por bloques (el logo puede ser grande).
+function aBase64(texto) {
+  const bytes = new TextEncoder().encode(texto);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(bin);
+}
+function deBase64(b64) {
+  const bin = atob(b64.replace(/\s/g, ''));
+  return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
+}
+
+function cabecerasGitHub() {
+  return {
+    Authorization: 'Bearer ' + localStorage.getItem(K.token),
+    Accept: 'application/vnd.github+json',
+    'Content-Type': 'application/json',
+  };
+}
+
+const URL_RESPALDO = `https://api.github.com/repos/${RESPALDO.repo}/contents/${RESPALDO.ruta}`;
+
+async function subirRespaldo() {
+  let sha;
+  const consulta = await fetch(`${URL_RESPALDO}?ref=${RESPALDO.rama}`, { headers: cabecerasGitHub() });
+  if (consulta.status === 401) throw new Error('El token no es válido o ya venció');
+  if (consulta.ok) sha = (await consulta.json()).sha;
+
+  const respuesta = await fetch(URL_RESPALDO, {
+    method: 'PUT',
+    headers: cabecerasGitHub(),
+    body: JSON.stringify({
+      message: 'Respaldo del cotizador — ' + new Date().toLocaleString('es-CO'),
+      content: aBase64(JSON.stringify(datosParaRespaldo(), null, 1)),
+      branch: RESPALDO.rama,
+      ...(sha ? { sha } : {}),
+    }),
+  });
+  if (respuesta.status === 401) throw new Error('El token no es válido o ya venció');
+  if (respuesta.status === 403 || respuesta.status === 404) {
+    throw new Error('El token no tiene permiso de escritura sobre el repositorio Karate');
+  }
+  if (!respuesta.ok) throw new Error('GitHub respondió ' + respuesta.status);
+  localStorage.setItem(K.ultimoRespaldo, new Date().toISOString());
+  pintarEstadoRespaldo();
+}
+
+async function bajarRespaldo() {
+  const respuesta = await fetch(`${URL_RESPALDO}?ref=${RESPALDO.rama}`, { headers: cabecerasGitHub() });
+  if (respuesta.status === 401) throw new Error('El token no es válido o ya venció');
+  if (respuesta.status === 404) throw new Error('Todavía no hay ningún respaldo guardado');
+  if (!respuesta.ok) throw new Error('GitHub respondió ' + respuesta.status);
+  const cuerpo = await respuesta.json();
+  return JSON.parse(deBase64(cuerpo.content));
+}
+
+function aplicarRespaldo(datos) {
+  if (!datos || !Array.isArray(datos.catalogo) || !Array.isArray(datos.historial) || typeof datos.config !== 'object') {
+    throw new Error('El archivo no parece una copia del cotizador');
+  }
+  delete datos.config.token; // por si viniera de una copia vieja
+  config = Object.assign({ prefijo: 'COT', consecutivo: 1, ivaPct: 0 }, datos.config);
+  catalogo = datos.catalogo;
+  historial = datos.historial;
+  guardar(K.config, config);
+  guardar(K.catalogo, catalogo);
+  guardar(K.historial, historial);
+  pintarNegocio();
+  pintarCatalogo();
+  pintarHistorial();
+  pintarItems();
+  pintarTotales();
+}
+
+// Tras generar una cotización: respaldo automático en segundo plano (si hay token).
+function respaldarAuto() {
+  if (!localStorage.getItem(K.token)) return;
+  subirRespaldo()
+    .then(() => aviso('Respaldo guardado en GitHub ✔'))
+    .catch((e) => aviso('⚠️ No se pudo respaldar: ' + e.message));
+}
+
+function pintarEstadoRespaldo() {
+  const el = $('#estado-respaldo');
+  const tiene = !!localStorage.getItem(K.token);
+  const ultimo = localStorage.getItem(K.ultimoRespaldo);
+  if (!tiene) {
+    el.textContent = 'Sin token: el respaldo automático está apagado.';
+  } else {
+    el.textContent = ultimo
+      ? `Último respaldo: ${new Date(ultimo).toLocaleString('es-CO')}`
+      : 'Token guardado. Aún no se ha hecho el primer respaldo.';
+  }
+}
+
+$('#cfg-token').addEventListener('input', (e) => {
+  const v = e.target.value.trim();
+  if (v) localStorage.setItem(K.token, v);
+  else localStorage.removeItem(K.token);
+  pintarEstadoRespaldo();
+});
+
+$('#btn-respaldar').addEventListener('click', async (e) => {
+  if (!localStorage.getItem(K.token)) { aviso('Primero pega el token de GitHub'); return; }
+  e.target.disabled = true;
+  try {
+    await subirRespaldo();
+    aviso('Respaldo guardado en GitHub ✔');
+  } catch (err) {
+    aviso('⚠️ ' + err.message);
+  } finally {
+    e.target.disabled = false;
+  }
+});
+
+$('#btn-restaurar').addEventListener('click', async (e) => {
+  if (!localStorage.getItem(K.token)) { aviso('Primero pega el token de GitHub'); return; }
+  if (!confirm('Esto REEMPLAZA el catálogo, la configuración y el historial de este teléfono con lo guardado en GitHub. ¿Continuar?')) return;
+  e.target.disabled = true;
+  try {
+    aplicarRespaldo(await bajarRespaldo());
+    aviso('Datos restaurados desde GitHub ✔');
+  } catch (err) {
+    aviso('⚠️ ' + err.message);
+  } finally {
+    e.target.disabled = false;
+  }
+});
+
+// ---- copia manual en archivo (sin token) ----
+$('#btn-exportar').addEventListener('click', async () => {
+  const contenido = JSON.stringify(datosParaRespaldo(), null, 1);
+  const nombre = 'cotizador-respaldo-' + new Date().toISOString().slice(0, 10) + '.json';
+  const archivo = new File([contenido], nombre, { type: 'application/json' });
+  if (navigator.canShare && navigator.canShare({ files: [archivo] })) {
+    try { await navigator.share({ files: [archivo], title: 'Copia del cotizador' }); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  const enlace = document.createElement('a');
+  enlace.href = URL.createObjectURL(new Blob([contenido], { type: 'application/json' }));
+  enlace.download = nombre;
+  enlace.click();
+  URL.revokeObjectURL(enlace.href);
+});
+
+$('#btn-importar').addEventListener('click', () => $('#archivo-importar').click());
+$('#archivo-importar').addEventListener('change', async (e) => {
+  const archivo = e.target.files[0];
+  if (!archivo) return;
+  if (!confirm('Esto REEMPLAZA los datos de este teléfono con los del archivo. ¿Continuar?')) { e.target.value = ''; return; }
+  try {
+    aplicarRespaldo(JSON.parse(await archivo.text()));
+    aviso('Copia importada ✔');
+  } catch (err) {
+    aviso('⚠️ ' + err.message);
+  }
+  e.target.value = '';
+});
+
 // ---------------------------------------------------------------- varios
 function escapar(s) {
   return String(s ?? '')
@@ -649,3 +832,5 @@ pintarFormulario();
 pintarHistorial();
 pintarCatalogo();
 pintarNegocio();
+$('#cfg-token').value = localStorage.getItem(K.token) || '';
+pintarEstadoRespaldo();

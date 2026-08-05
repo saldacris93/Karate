@@ -149,6 +149,12 @@ button {
 .prod .precio { flex: 0 0 32%; }
 .prod .quitar { width: auto; margin: 0; padding: 6px 10px; background: none; color: var(--rojo); font-size: 1.1rem; font-weight: 700; }
 
+.instrucciones { margin-top: 10px; font-size: .85rem; color: var(--gris); }
+.instrucciones summary { cursor: pointer; font-weight: 600; color: var(--rojo-oscuro); }
+.instrucciones ol { padding-left: 18px; margin: 8px 0 4px; }
+.instrucciones li { margin-bottom: 6px; }
+code { background: var(--gris-claro); border-radius: 4px; padding: 1px 5px; font-size: .85em; }
+
 .logo-vista { margin-top: 10px; display: flex; align-items: center; gap: 12px; }
 .logo-vista img { max-height: 64px; max-width: 140px; border: 1px solid var(--gris-claro); border-radius: 8px; background: #fff; }
 .logo-vista button { width: auto; margin: 0; padding: 8px 12px; }

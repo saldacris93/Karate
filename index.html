@@ -117,6 +117,37 @@
         <input id="cfg-consecutivo" type="number" min="1" step="1" inputmode="numeric" value="1">
       </label>
     </fieldset>
+
+    <fieldset>
+      <legend>Respaldo en GitHub</legend>
+      <p class="ayuda">Guarda catálogo, configuración e historial en el archivo <code>datos/respaldo.json</code> del repositorio. Con el token configurado, el respaldo se hace solo cada vez que generas una cotización.</p>
+      <p class="ayuda">⚠️ El repositorio es público: cualquiera podría ver el respaldo (incluye nombres y teléfonos de tus clientes).</p>
+      <label>Token de GitHub
+        <input id="cfg-token" type="password" placeholder="github_pat_…" autocomplete="off">
+      </label>
+      <details class="instrucciones">
+        <summary>¿Cómo creo el token? (una sola vez)</summary>
+        <ol>
+          <li>Abre <strong>github.com → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token</strong>.</li>
+          <li>Nombre: <em>cotizador</em>. Vencimiento: el máximo que te ofrezca.</li>
+          <li>En <strong>Repository access</strong> elige <em>Only select repositories</em> → <strong>Karate</strong>.</li>
+          <li>En <strong>Permissions → Repository permissions → Contents</strong> elige <em>Read and write</em>.</li>
+          <li>Genera el token, cópialo y pégalo aquí. Queda guardado solo en este teléfono (nunca viaja en el respaldo).</li>
+        </ol>
+      </details>
+      <p class="ayuda" id="estado-respaldo"></p>
+      <button id="btn-respaldar" type="button" class="primario">☁️ Guardar respaldo ahora</button>
+      <button id="btn-restaurar" type="button" class="secundario">⤵️ Restaurar desde GitHub</button>
+    </fieldset>
+
+    <fieldset>
+      <legend>Copia en archivo (sin token)</legend>
+      <p class="ayuda">Alternativa manual: descarga un archivo con todos tus datos y guárdalo donde quieras (Drive, correo, etc.).</p>
+      <button id="btn-exportar" type="button" class="secundario">📤 Exportar copia</button>
+      <button id="btn-importar" type="button" class="secundario">📥 Importar copia</button>
+      <input id="archivo-importar" type="file" accept="application/json,.json" hidden>
+    </fieldset>
+
     <p class="ayuda">✔️ Todo se guarda automáticamente en este teléfono.</p>
   </section>
 </main>

@@ -1,5 +1,5 @@
 // Service Worker: deja la app disponible sin internet (cache-first con actualización en segundo plano).
-const CACHE = 'cotizador-v1';
+const CACHE = 'cotizador-v2';
 const ARCHIVOS = [
   '.',
   'index.html',
@@ -26,6 +26,7 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  if (new URL(e.request.url).origin !== location.origin) return; // API de GitHub: siempre a la red
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true }).then((enCache) => {
       const red = fetch(e.request)
