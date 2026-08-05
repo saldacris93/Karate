@@ -76,7 +76,7 @@ function tallasDe(prod) {
 }
 
 let config = leer(K.config, {
-  negocio: '', telefono: '', correo: '', ciudad: '',
+  negocio: '', nit: '', telefono: '', correo: '', ciudad: '',
   logo: '', ivaPct: 0, pie: '', prefijo: 'COT', consecutivo: 1,
 });
 let catalogo = leer(K.catalogo, CATALOGO_INICIAL);
@@ -103,7 +103,7 @@ function cotizacionVacia() {
   return {
     numero: '',
     fecha: '',
-    cliente: { nombre: '', telefono: '' },
+    cliente: { nombre: '', nit: '', telefono: '' },
     items: [{ producto: '', talla: '—', cantidad: 1, precio: 0 }],
     descuento: 0,
     vigencia: 8,
@@ -160,6 +160,7 @@ function pintarFormulario() {
   $('#titulo-cotizacion').textContent = actual.numero
     ? `Cotización ${actual.numero}` : 'Nueva cotización';
   $('#cliente-nombre').value = actual.cliente.nombre;
+  $('#cliente-nit').value = actual.cliente.nit || '';
   $('#cliente-telefono').value = actual.cliente.telefono;
   $('#descuento').value = actual.descuento || '';
   $('#vigencia').value = actual.vigencia;
@@ -283,6 +284,7 @@ function pintarTotales() {
 function guardarBorrador() { guardar(K.borrador, actual); }
 
 $('#cliente-nombre').addEventListener('input', (e) => { actual.cliente.nombre = e.target.value; guardarBorrador(); });
+$('#cliente-nit').addEventListener('input', (e) => { actual.cliente.nit = e.target.value; guardarBorrador(); });
 $('#cliente-telefono').addEventListener('input', (e) => { actual.cliente.telefono = e.target.value; guardarBorrador(); });
 $('#descuento').addEventListener('input', (e) => { actual.descuento = Number(e.target.value) || 0; guardarBorrador(); pintarTotales(); });
 $('#vigencia').addEventListener('input', (e) => { actual.vigencia = Math.max(1, parseInt(e.target.value, 10) || 8); guardarBorrador(); });
@@ -361,6 +363,7 @@ function generarPDF(cot) {
   doc.text(config.negocio || 'Mi negocio', xTexto, y);
   doc.setFont('helvetica', 'normal').setFontSize(9).setTextColor(80);
   const lineas = [
+    config.nit && `NIT: ${config.nit}`,
     [config.telefono && `Tel/WhatsApp: ${config.telefono}`, config.correo].filter(Boolean).join('  ·  '),
     config.ciudad,
   ].filter(Boolean);
@@ -380,16 +383,16 @@ function generarPDF(cot) {
   y += 8;
 
   // Cliente
-  doc.setFont('helvetica', 'bold').setFontSize(10).setTextColor(28, 25, 23);
-  doc.text('Cliente:', margen, y);
-  doc.setFont('helvetica', 'normal');
-  doc.text(cot.cliente.nombre, margen + 18, y);
-  if (cot.cliente.telefono) {
+  doc.setFontSize(10).setTextColor(28, 25, 23);
+  const filaCliente = (etiqueta, valor) => {
+    doc.setFont('helvetica', 'bold').text(etiqueta, margen, y);
+    doc.setFont('helvetica', 'normal').text(String(valor), margen + 20, y);
     y += 5;
-    doc.setFont('helvetica', 'bold').text('Teléfono:', margen, y);
-    doc.setFont('helvetica', 'normal').text(String(cot.cliente.telefono), margen + 18, y);
-  }
-  y += 6;
+  };
+  filaCliente('Cliente:', cot.cliente.nombre);
+  if (cot.cliente.nit) filaCliente('NIT/C.C.:', cot.cliente.nit);
+  if (cot.cliente.telefono) filaCliente('Teléfono:', cot.cliente.telefono);
+  y += 1;
 
   // Tabla de productos
   const filas = cot.items.map((it, i) => [
@@ -658,6 +661,7 @@ document.querySelector('.tab[data-pantalla="cotizar"]').addEventListener('click'
 // ---------------------------------------------------------------- negocio
 function pintarNegocio() {
   $('#cfg-negocio').value = config.negocio;
+  $('#cfg-nit').value = config.nit || '';
   $('#cfg-telefono').value = config.telefono;
   $('#cfg-correo').value = config.correo;
   $('#cfg-ciudad').value = config.ciudad;
@@ -679,6 +683,7 @@ function enlazarConfig(id, campo, transform) {
   });
 }
 enlazarConfig('#cfg-negocio', 'negocio');
+enlazarConfig('#cfg-nit', 'nit');
 enlazarConfig('#cfg-telefono', 'telefono');
 enlazarConfig('#cfg-correo', 'correo');
 enlazarConfig('#cfg-ciudad', 'ciudad');
