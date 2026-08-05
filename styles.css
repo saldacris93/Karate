@@ -1,0 +1,198 @@
+:root {
+  --rojo: #b91c1c;
+  --rojo-oscuro: #7f1d1d;
+  --negro: #1c1917;
+  --gris: #57534e;
+  --gris-claro: #e7e5e4;
+  --fondo: #fafaf9;
+  --blanco: #ffffff;
+  --verde: #15803d;
+  --radio: 12px;
+}
+
+* { box-sizing: border-box; }
+
+[hidden] { display: none !important; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--fondo);
+  color: var(--negro);
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+}
+
+.barra {
+  background: var(--rojo);
+  color: var(--blanco);
+  padding: 14px 16px calc(14px);
+  padding-top: calc(14px + env(safe-area-inset-top));
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 2px 6px rgba(0,0,0,.2);
+}
+.barra h1 { margin: 0; font-size: 1.15rem; }
+.barra .subtitulo { font-size: .8rem; opacity: .85; }
+
+main { padding: 12px; max-width: 640px; margin: 0 auto; }
+
+.pantalla { display: none; }
+.pantalla.activa { display: block; }
+
+.titulo-seccion { font-size: 1.05rem; margin: 6px 2px 10px; }
+
+.ayuda { font-size: .82rem; color: var(--gris); margin: 4px 2px 12px; }
+
+fieldset {
+  border: 1px solid var(--gris-claro);
+  border-radius: var(--radio);
+  background: var(--blanco);
+  margin: 0 0 14px;
+  padding: 10px 12px 14px;
+}
+legend { font-size: .8rem; font-weight: 700; color: var(--rojo-oscuro); padding: 0 6px; text-transform: uppercase; letter-spacing: .04em; }
+
+label { display: block; font-size: .85rem; font-weight: 600; color: var(--gris); margin-top: 10px; }
+
+input, select, textarea {
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px 12px;
+  font-size: 1rem;
+  border: 1px solid var(--gris-claro);
+  border-radius: 10px;
+  background: var(--fondo);
+  color: var(--negro);
+  font-family: inherit;
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--rojo); border-color: transparent; }
+
+button {
+  font-family: inherit;
+  font-size: 1rem;
+  border: none;
+  border-radius: var(--radio);
+  padding: 13px 16px;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 8px;
+  font-weight: 600;
+}
+.primario { background: var(--rojo); color: var(--blanco); box-shadow: 0 2px 6px rgba(185,28,28,.35); }
+.primario:active { background: var(--rojo-oscuro); }
+.secundario { background: var(--blanco); color: var(--rojo-oscuro); border: 1.5px solid var(--rojo); }
+.peligro-suave { background: none; color: var(--gris); border: 1px dashed var(--gris-claro); font-weight: 500; }
+
+/* ---- ítems de la cotización ---- */
+.item {
+  border: 1px solid var(--gris-claro);
+  border-radius: 10px;
+  padding: 10px;
+  margin-top: 10px;
+  background: var(--fondo);
+}
+.item .fila { display: flex; gap: 8px; }
+.item .fila > label { flex: 1; margin-top: 6px; }
+.item .fila > label.corta { flex: 0 0 30%; }
+.item .encabezado-item { display: flex; justify-content: space-between; align-items: center; }
+.item .encabezado-item strong { font-size: .8rem; color: var(--gris); }
+.item .quitar {
+  width: auto; margin: 0; padding: 4px 10px;
+  background: none; border: none; color: var(--rojo); font-size: 1.1rem; font-weight: 700;
+}
+.item .total-item { text-align: right; font-size: .9rem; font-weight: 700; margin-top: 8px; color: var(--rojo-oscuro); }
+
+/* ---- totales ---- */
+.panel-total {
+  background: var(--negro);
+  color: var(--blanco);
+  border-radius: var(--radio);
+  padding: 12px 16px;
+  margin-bottom: 14px;
+}
+.fila-total { display: flex; justify-content: space-between; padding: 3px 0; font-size: .92rem; opacity: .85; }
+.fila-total.grande { font-size: 1.25rem; font-weight: 800; opacity: 1; border-top: 1px solid rgba(255,255,255,.25); margin-top: 6px; padding-top: 8px; }
+
+.acciones { margin-bottom: 20px; }
+
+/* ---- historial ---- */
+.tarjeta-cot {
+  background: var(--blanco);
+  border: 1px solid var(--gris-claro);
+  border-radius: var(--radio);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.tarjeta-cot .cabecera { display: flex; justify-content: space-between; align-items: baseline; }
+.tarjeta-cot .numero { font-weight: 800; color: var(--rojo-oscuro); }
+.tarjeta-cot .fecha { font-size: .78rem; color: var(--gris); }
+.tarjeta-cot .cliente { margin: 4px 0 2px; font-size: .95rem; }
+.tarjeta-cot .total { font-weight: 800; }
+.tarjeta-cot .botones { display: flex; gap: 8px; margin-top: 8px; }
+.tarjeta-cot .botones button { margin: 0; padding: 9px 8px; font-size: .85rem; }
+.vacio { text-align: center; color: var(--gris); padding: 30px 10px; font-size: .9rem; }
+
+/* ---- catálogo ---- */
+.prod {
+  display: flex; gap: 8px; align-items: center;
+  background: var(--blanco);
+  border: 1px solid var(--gris-claro);
+  border-radius: 10px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+.prod input { margin: 0; }
+.prod .nombre { flex: 1; }
+.prod .precio { flex: 0 0 32%; }
+.prod .quitar { width: auto; margin: 0; padding: 6px 10px; background: none; color: var(--rojo); font-size: 1.1rem; font-weight: 700; }
+
+.logo-vista { margin-top: 10px; display: flex; align-items: center; gap: 12px; }
+.logo-vista img { max-height: 64px; max-width: 140px; border: 1px solid var(--gris-claro); border-radius: 8px; background: #fff; }
+.logo-vista button { width: auto; margin: 0; padding: 8px 12px; }
+
+/* ---- pestañas inferiores ---- */
+.tabs {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  display: flex;
+  background: var(--blanco);
+  border-top: 1px solid var(--gris-claro);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 10;
+}
+.tab {
+  flex: 1;
+  background: none;
+  border: none;
+  border-radius: 0;
+  margin: 0;
+  padding: 8px 4px 10px;
+  font-size: 1.25rem;
+  color: var(--gris);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.tab span { font-size: .68rem; font-weight: 600; }
+.tab.activa { color: var(--rojo); }
+
+/* ---- aviso flotante ---- */
+.aviso {
+  position: fixed;
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--negro);
+  color: var(--blanco);
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: .88rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,.3);
+  z-index: 20;
+  max-width: 90vw;
+  text-align: center;
+}

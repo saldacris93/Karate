@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#b91c1c">
+<title>Cotizador Karate</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icono-192.png">
+<link rel="apple-touch-icon" href="icons/icono-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="barra">
+  <h1 id="titulo-negocio">Cotizador</h1>
+  <span class="subtitulo">Uniformes de karate</span>
+</header>
+
+<main>
+  <!-- ================= COTIZAR ================= -->
+  <section id="pantalla-cotizar" class="pantalla activa">
+    <h2 class="titulo-seccion" id="titulo-cotizacion">Nueva cotización</h2>
+
+    <fieldset>
+      <legend>Cliente</legend>
+      <label>Nombre
+        <input id="cliente-nombre" type="text" placeholder="Nombre del cliente o dojo" autocomplete="off">
+      </label>
+      <label>Teléfono / WhatsApp
+        <input id="cliente-telefono" type="tel" placeholder="3001234567" autocomplete="off">
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Productos</legend>
+      <div id="lista-items"></div>
+      <button id="btn-agregar-item" type="button" class="secundario">+ Agregar producto</button>
+    </fieldset>
+
+    <fieldset>
+      <legend>Detalles</legend>
+      <label>Descuento (valor en $)
+        <input id="descuento" type="number" min="0" step="any" inputmode="numeric" placeholder="0">
+      </label>
+      <label>Vigencia de la cotización (días)
+        <input id="vigencia" type="number" min="1" step="1" inputmode="numeric" value="8">
+      </label>
+      <label>Notas para el cliente
+        <textarea id="notas" rows="2" placeholder="Ej.: incluye bordado del nombre. Entrega en 5 días hábiles."></textarea>
+      </label>
+    </fieldset>
+
+    <div class="panel-total">
+      <div class="fila-total"><span>Subtotal</span><span id="ver-subtotal">$ 0</span></div>
+      <div class="fila-total" id="fila-descuento" hidden><span>Descuento</span><span id="ver-descuento">$ 0</span></div>
+      <div class="fila-total" id="fila-iva" hidden><span id="etiqueta-iva">IVA</span><span id="ver-iva">$ 0</span></div>
+      <div class="fila-total grande"><span>TOTAL</span><span id="ver-total">$ 0</span></div>
+    </div>
+
+    <div class="acciones">
+      <button id="btn-compartir" type="button" class="primario">📄 Generar y compartir PDF</button>
+      <button id="btn-descargar" type="button" class="secundario">⬇️ Solo descargar PDF</button>
+      <button id="btn-wpp-texto" type="button" class="secundario">💬 Enviar resumen por WhatsApp (texto)</button>
+      <button id="btn-limpiar" type="button" class="peligro-suave">Limpiar formulario</button>
+    </div>
+  </section>
+
+  <!-- ================= HISTORIAL ================= -->
+  <section id="pantalla-historial" class="pantalla">
+    <h2 class="titulo-seccion">Cotizaciones guardadas</h2>
+    <p class="ayuda">Cada PDF que generas queda guardado aquí (en este teléfono). Puedes volver a compartirlo, duplicarlo para un cliente nuevo o eliminarlo.</p>
+    <div id="lista-historial"></div>
+  </section>
+
+  <!-- ================= CATÁLOGO ================= -->
+  <section id="pantalla-catalogo" class="pantalla">
+    <h2 class="titulo-seccion">Catálogo y precios</h2>
+    <p class="ayuda">Estos productos aparecen en la lista al cotizar. Ajusta nombres y precios a tu gusto; se guardan solos.</p>
+    <div id="lista-catalogo"></div>
+    <button id="btn-agregar-producto" type="button" class="secundario">+ Agregar producto al catálogo</button>
+  </section>
+
+  <!-- ================= NEGOCIO ================= -->
+  <section id="pantalla-negocio" class="pantalla">
+    <h2 class="titulo-seccion">Datos de tu negocio</h2>
+    <p class="ayuda">Esta información sale en el encabezado de todos los PDF.</p>
+    <fieldset>
+      <label>Nombre del negocio
+        <input id="cfg-negocio" type="text" placeholder="Ej.: Uniformes Bushido">
+      </label>
+      <label>Teléfono / WhatsApp
+        <input id="cfg-telefono" type="tel" placeholder="3001234567">
+      </label>
+      <label>Correo
+        <input id="cfg-correo" type="email" placeholder="ventas@minegocio.com">
+      </label>
+      <label>Ciudad / dirección
+        <input id="cfg-ciudad" type="text" placeholder="Bogotá, Colombia">
+      </label>
+      <label>Logo (opcional)
+        <input id="cfg-logo" type="file" accept="image/*">
+      </label>
+      <div id="cfg-logo-vista" class="logo-vista" hidden>
+        <img id="cfg-logo-img" alt="Logo actual">
+        <button id="cfg-logo-quitar" type="button" class="peligro-suave">Quitar logo</button>
+      </div>
+      <label>IVA % (deja 0 si no facturas IVA)
+        <input id="cfg-iva" type="number" min="0" max="50" step="any" inputmode="numeric" value="0">
+      </label>
+      <label>Condiciones / pie de página del PDF
+        <textarea id="cfg-pie" rows="3" placeholder="Ej.: 50% de anticipo para iniciar. Pagos por Nequi 3001234567."></textarea>
+      </label>
+      <label>Prefijo de numeración
+        <input id="cfg-prefijo" type="text" value="COT" maxlength="8">
+      </label>
+      <label>Próximo número de cotización
+        <input id="cfg-consecutivo" type="number" min="1" step="1" inputmode="numeric" value="1">
+      </label>
+    </fieldset>
+    <p class="ayuda">✔️ Todo se guarda automáticamente en este teléfono.</p>
+  </section>
+</main>
+
+<nav class="tabs">
+  <button data-pantalla="cotizar" class="tab activa" type="button">🧾<span>Cotizar</span></button>
+  <button data-pantalla="historial" class="tab" type="button">🗂️<span>Historial</span></button>
+  <button data-pantalla="catalogo" class="tab" type="button">🥋<span>Catálogo</span></button>
+  <button data-pantalla="negocio" class="tab" type="button">⚙️<span>Negocio</span></button>
+</nav>
+
+<div id="aviso" class="aviso" hidden></div>
+
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="vendor/jspdf.plugin.autotable.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
