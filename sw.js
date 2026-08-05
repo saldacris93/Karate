@@ -1,5 +1,6 @@
-// Service Worker: deja la app disponible sin internet (cache-first con actualización en segundo plano).
-const CACHE = 'cotizador-v3';
+// Service Worker: red primero (para tomar siempre la última versión publicada)
+// con caché como respaldo para funcionar sin internet.
+const CACHE = 'cotizador-v4';
 const ARCHIVOS = [
   '.',
   'index.html',
@@ -13,7 +14,12 @@ const ARCHIVOS = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ARCHIVOS)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE)
+      // cache:'reload' salta el caché HTTP del navegador: trae la copia real del servidor
+      .then((c) => c.addAll(ARCHIVOS.map((u) => new Request(u, { cache: 'reload' }))))
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener('activate', (e) => {
@@ -28,17 +34,17 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   if (new URL(e.request.url).origin !== location.origin) return; // API de GitHub: siempre a la red
   e.respondWith(
-    caches.match(e.request, { ignoreSearch: true }).then((enCache) => {
-      const red = fetch(e.request)
-        .then((resp) => {
-          if (resp.ok && new URL(e.request.url).origin === location.origin) {
-            const copia = resp.clone();
-            caches.open(CACHE).then((c) => c.put(e.request, copia));
-          }
-          return resp;
-        })
-        .catch(() => enCache);
-      return enCache || red;
-    }),
+    fetch(new Request(e.request, { cache: 'no-cache' }))
+      .then((resp) => {
+        if (resp.ok) {
+          const copia = resp.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copia));
+        }
+        return resp;
+      })
+      .catch(() =>
+        caches.match(e.request, { ignoreSearch: true })
+          .then((enCache) => enCache || caches.match('index.html')),
+      ),
   );
 });
