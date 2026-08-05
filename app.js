@@ -28,6 +28,9 @@ function leer(clave, porDefecto) {
 }
 function guardar(clave, valor) {
   localStorage.setItem(clave, JSON.stringify(valor));
+  // Todo cambio real (catálogo, configuración, historial) programa un respaldo;
+  // el borrador se escribe con cada tecla y no hace parte del respaldo.
+  if (clave !== K.borrador) respaldarPronto();
 }
 
 // Uniformes con precio por talla (precio sugerido de las listas 2025).
@@ -989,12 +992,23 @@ function aplicarRespaldo(datos) {
   pintarTotales();
 }
 
-// Tras generar una cotización: respaldo automático en segundo plano (si hay token).
+// Tras generar una cotización o cuenta de cobro: respaldo inmediato con aviso.
 function respaldarAuto() {
   if (!localStorage.getItem(K.token)) return;
+  clearTimeout(respaldarPronto._t);
   subirRespaldo()
     .then(() => aviso('Respaldo guardado en GitHub ✔'))
     .catch((e) => aviso('⚠️ No se pudo respaldar: ' + e.message));
+}
+
+// Tras cualquier otro cambio (precios, configuración, borrar cotizaciones):
+// respaldo silencioso unos segundos después de la última modificación.
+function respaldarPronto() {
+  if (!localStorage.getItem(K.token)) return;
+  clearTimeout(respaldarPronto._t);
+  respaldarPronto._t = setTimeout(() => {
+    subirRespaldo().catch(() => { /* se reintenta con el siguiente cambio */ });
+  }, 5000);
 }
 
 function pintarEstadoRespaldo() {
