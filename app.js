@@ -34,7 +34,7 @@ function guardar(clave, valor) {
 const UNIFORMES = [
   {
     nombre: 'Karategui clásico liviano',
-    precios: { '00': 143000, '0': 143000, '0,5': 143000, '1': 143000, '1,5': 155000, '2': 155000, '2,5': 168000, '3': 175000, '3,5': 181500, '4': 192000, '5': 198500 },
+    precios: { '00': 143000, '0': 143000, '0,5': 143000, '1': 143000, '1,5': 155000, '2': 155000, '2,5': 168000, '3': 175000, '3,5': 181500, '4': 192000, '5': 198500, '6': 222320 },
   },
   {
     nombre: 'Karategui clásico kata',
@@ -46,7 +46,7 @@ const UNIFORMES = [
   },
   {
     nombre: 'Combo kata (colores)',
-    precios: { '00': 363328, '0': 363328, '1': 363328, '1,5': 374528, '2': 383040, '2,5': 399392, '3': 413280, '3,5': 423136, '4': 443520, '5': 463232 },
+    precios: { '00': 363328, '0': 363328, '1': 363328, '1,5': 374528, '2': 383040, '2,5': 399392, '3': 413280, '3,5': 423136, '4': 443520, '5': 463232, '6': 518820 },
   },
 ];
 
@@ -94,6 +94,17 @@ if (!catalogo.some((p) => p.precios)) {
     ...catalogo.filter((p) => !EJEMPLOS_VIEJOS.includes(p.nombre)),
   ];
   guardar(K.catalogo, catalogo);
+}
+
+// Migración 2: talla 6 (+12% sobre la talla 5) en clásico liviano y combo kata
+// para catálogos guardados antes de este cambio.
+if (Number(localStorage.getItem('ck_mig') || 1) < 2) {
+  const talla6 = { 'Karategui clásico liviano': 222320, 'Combo kata (colores)': 518820 };
+  catalogo.forEach((p) => {
+    if (p.precios && talla6[p.nombre] != null && !('6' in p.precios)) p.precios['6'] = talla6[p.nombre];
+  });
+  guardar(K.catalogo, catalogo);
+  localStorage.setItem('ck_mig', '2');
 }
 
 // La cotización que se está editando. `numero` queda vacío hasta generar el PDF.
