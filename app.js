@@ -30,18 +30,50 @@ function guardar(clave, valor) {
   localStorage.setItem(clave, JSON.stringify(valor));
 }
 
+// Uniformes con precio por talla (precio sugerido de las listas 2025).
+const UNIFORMES = [
+  {
+    nombre: 'Karategui clásico liviano',
+    precios: { '00': 143000, '0': 143000, '0,5': 143000, '1': 143000, '1,5': 155000, '2': 155000, '2,5': 168000, '3': 175000, '3,5': 181500, '4': 192000, '5': 198500 },
+  },
+  {
+    nombre: 'Karategui clásico kata',
+    precios: { '00': 201600, '0': 201600, '0,5': 201600, '1': 201600, '1,5': 207200, '2': 216160, '2,5': 225120, '3': 234080, '3,5': 239680, '4': 252000, '5': 263200, '6': 275520 },
+  },
+  {
+    nombre: 'Combo liviano (colores)',
+    precios: { '00': 263200, '0': 263200, '1': 263200, '1,5': 288960, '2': 288960, '2,5': 303520, '3': 313600, '3,5': 326240, '4': 342720, '5': 355040, '6': 375200 },
+  },
+  {
+    nombre: 'Combo kata (colores)',
+    precios: { '00': 363328, '0': 363328, '1': 363328, '1,5': 374528, '2': 383040, '2,5': 399392, '3': 413280, '3,5': 423136, '4': 443520, '5': 463232 },
+  },
+];
+
 const CATALOGO_INICIAL = [
-  { nombre: 'Karategui liviano 8 oz (entrenamiento)', precio: 120000 },
-  { nombre: 'Karategui mediano 10 oz', precio: 160000 },
-  { nombre: 'Karategui kumite (competencia)', precio: 220000 },
-  { nombre: 'Karategui kata pesado 14 oz', precio: 280000 },
+  ...UNIFORMES,
   { nombre: 'Pantalón de repuesto', precio: 60000 },
   { nombre: 'Cinturón de color', precio: 18000 },
   { nombre: 'Cinturón negro bordado', precio: 65000 },
   { nombre: 'Bordado de nombre / escudo', precio: 25000 },
 ];
 
+// Tallas genéricas para productos sin precio por talla (cinturones, etc.).
 const TALLAS = ['—', '000', '00', '0', '1', '2', '3', '4', '5', '6', '7', '8'];
+
+// JS reordena las claves con aspecto de número entero ('0','1','2'…), así que
+// las tallas se ordenan explícitamente: 000, 00, 0, 0,5, 1, 1,5, 2…
+function ordenTalla(t) {
+  if (t === '000') return -2;
+  if (t === '00') return -1;
+  const n = parseFloat(String(t).replace(',', '.'));
+  return Number.isNaN(n) ? 999 : n;
+}
+function tallasDe(prod) {
+  return prod && prod.precios
+    ? Object.keys(prod.precios).sort((a, b) => ordenTalla(a) - ordenTalla(b))
+    : TALLAS;
+}
 
 let config = leer(K.config, {
   negocio: '', telefono: '', correo: '', ciudad: '',
@@ -49,6 +81,20 @@ let config = leer(K.config, {
 });
 let catalogo = leer(K.catalogo, CATALOGO_INICIAL);
 let historial = leer(K.historial, []);
+
+// Migración: a los catálogos guardados antes de existir los uniformes con precio
+// por talla se les agregan una sola vez, retirando los productos de ejemplo.
+const EJEMPLOS_VIEJOS = [
+  'Karategui liviano 8 oz (entrenamiento)', 'Karategui mediano 10 oz',
+  'Karategui kumite (competencia)', 'Karategui kata pesado 14 oz',
+];
+if (!catalogo.some((p) => p.precios)) {
+  catalogo = [
+    ...JSON.parse(JSON.stringify(UNIFORMES)),
+    ...catalogo.filter((p) => !EJEMPLOS_VIEJOS.includes(p.nombre)),
+  ];
+  guardar(K.catalogo, catalogo);
+}
 
 // La cotización que se está editando. `numero` queda vacío hasta generar el PDF.
 let actual = leer(K.borrador, null) || cotizacionVacia();
@@ -133,6 +179,9 @@ function pintarItems() {
       `<option value="${escapar(p.nombre)}" ${p.nombre === it.producto ? 'selected' : ''}>${escapar(p.nombre)}</option>`
     ).join('');
     const esLibre = it.producto && !catalogo.some((p) => p.nombre === it.producto);
+    const prodSel = catalogo.find((p) => p.nombre === it.producto);
+    const tallas = tallasDe(prodSel);
+    if (!tallas.includes(it.talla)) it.talla = tallas[0];
 
     div.innerHTML = `
       <div class="encabezado-item">
@@ -151,7 +200,7 @@ function pintarItems() {
       </label>
       <div class="fila">
         <label class="corta">Talla
-          <select data-campo="talla">${TALLAS.map((t) => `<option ${t === it.talla ? 'selected' : ''}>${t}</option>`).join('')}</select>
+          <select data-campo="talla">${tallas.map((t) => `<option ${t === it.talla ? 'selected' : ''}>${t}</option>`).join('')}</select>
         </label>
         <label class="corta">Cant.
           <input type="number" data-campo="cantidad" min="1" step="1" inputmode="numeric" value="${it.cantidad}">
@@ -187,15 +236,28 @@ function alCambiarItem(ev, i) {
       it.producto = ev.target.value;
       const prod = catalogo.find((p) => p.nombre === it.producto);
       if (prod) {
-        it.precio = prod.precio;
-        ev.target.closest('.item').querySelector('[data-campo="precio"]').value = prod.precio;
+        if (prod.precios) {
+          if (!(it.talla in prod.precios)) it.talla = tallasDe(prod)[0];
+          it.precio = prod.precios[it.talla];
+        } else {
+          it.precio = prod.precio;
+        }
       }
-      ev.target.closest('.item').querySelector('[data-rol="libre"]').hidden = true;
+      // Redibuja para que el selector de tallas muestre las de este producto.
+      guardarBorrador();
+      pintarItems();
+      pintarTotales();
+      return;
     }
   } else if (campo === 'producto-libre') {
     it.producto = ev.target.value;
   } else if (campo === 'talla') {
     it.talla = ev.target.value;
+    const prod = catalogo.find((p) => p.nombre === it.producto);
+    if (prod && prod.precios && prod.precios[it.talla] != null) {
+      it.precio = prod.precios[it.talla];
+      ev.target.closest('.item').querySelector('[data-campo="precio"]').value = it.precio;
+    }
   } else if (campo === 'cantidad') {
     it.cantidad = Math.max(1, parseInt(ev.target.value, 10) || 1);
   } else if (campo === 'precio') {
@@ -536,17 +598,39 @@ function pintarCatalogo() {
   cont.innerHTML = '';
   catalogo.forEach((p, i) => {
     const div = document.createElement('div');
-    div.className = 'prod';
-    div.innerHTML = `
-      <input class="nombre" type="text" value="${escapar(p.nombre)}" placeholder="Nombre del producto">
-      <input class="precio" type="number" min="0" step="any" inputmode="numeric" value="${p.precio || ''}" placeholder="Precio">
-      <button type="button" class="quitar" title="Quitar">✕</button>`;
+    if (p.precios) {
+      // Producto con precio por talla: nombre arriba y cuadrícula talla → precio.
+      div.className = 'prod prod-tallas';
+      div.innerHTML = `
+        <div class="fila-prod">
+          <input class="nombre" type="text" value="${escapar(p.nombre)}" placeholder="Nombre del producto">
+          <button type="button" class="quitar" title="Quitar">✕</button>
+        </div>
+        <div class="cuadricula-tallas">
+          ${tallasDe(p).map((t) => [t, p.precios[t]]).map(([t, v]) => `
+            <label>T. ${escapar(t)}
+              <input type="number" min="0" step="any" inputmode="numeric" data-talla="${escapar(t)}" value="${v || ''}">
+            </label>`).join('')}
+        </div>`;
+      div.querySelectorAll('[data-talla]').forEach((inp) => {
+        inp.addEventListener('input', () => {
+          catalogo[i].precios[inp.dataset.talla] = Number(inp.value) || 0;
+          guardar(K.catalogo, catalogo);
+        });
+      });
+    } else {
+      div.className = 'prod';
+      div.innerHTML = `
+        <input class="nombre" type="text" value="${escapar(p.nombre)}" placeholder="Nombre del producto">
+        <input class="precio" type="number" min="0" step="any" inputmode="numeric" value="${p.precio || ''}" placeholder="Precio">
+        <button type="button" class="quitar" title="Quitar">✕</button>`;
+      div.querySelector('.precio').addEventListener('input', (e) => {
+        catalogo[i].precio = Number(e.target.value) || 0;
+        guardar(K.catalogo, catalogo);
+      });
+    }
     div.querySelector('.nombre').addEventListener('input', (e) => {
       catalogo[i].nombre = e.target.value;
-      guardar(K.catalogo, catalogo);
-    });
-    div.querySelector('.precio').addEventListener('input', (e) => {
-      catalogo[i].precio = Number(e.target.value) || 0;
       guardar(K.catalogo, catalogo);
     });
     div.querySelector('.quitar').addEventListener('click', () => {

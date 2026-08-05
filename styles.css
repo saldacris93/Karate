@@ -149,6 +149,13 @@ button {
 .prod .precio { flex: 0 0 32%; }
 .prod .quitar { width: auto; margin: 0; padding: 6px 10px; background: none; color: var(--rojo); font-size: 1.1rem; font-weight: 700; }
 
+.prod-tallas { display: block; }
+.prod-tallas .fila-prod { display: flex; gap: 8px; align-items: center; }
+.prod-tallas .fila-prod .nombre { flex: 1; font-weight: 700; }
+.cuadricula-tallas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 8px; margin-top: 8px; }
+.cuadricula-tallas label { font-size: .72rem; font-weight: 700; color: var(--gris); margin: 0; }
+.cuadricula-tallas input { padding: 7px 8px; font-size: .9rem; margin-top: 2px; }
+
 .instrucciones { margin-top: 10px; font-size: .85rem; color: var(--gris); }
 .instrucciones summary { cursor: pointer; font-weight: 600; color: var(--rojo-oscuro); }
 .instrucciones ol { padding-left: 18px; margin: 8px 0 4px; }

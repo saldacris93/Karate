@@ -1,6 +1,6 @@
 // Service Worker: red primero (para tomar siempre la última versión publicada)
 // con caché como respaldo para funcionar sin internet.
-const CACHE = 'cotizador-v4';
+const CACHE = 'cotizador-v5';
 const ARCHIVOS = [
   '.',
   'index.html',
