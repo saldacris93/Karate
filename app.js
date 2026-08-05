@@ -345,14 +345,12 @@ function consolidar() {
 }
 
 // ---------------------------------------------------------------- PDF
-function generarPDF(cot) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+// Encabezado común (negocio a la izquierda, título/número/fechas a la derecha).
+// Devuelve la coordenada Y donde continúa el contenido.
+function encabezadoPDF(doc, titulo, numero, lineasDerecha) {
   const ancho = doc.internal.pageSize.getWidth();
   const margen = 15;
   let y = 18;
-
-  // Encabezado
   if (config.logo) {
     try {
       doc.addImage(config.logo, 'PNG', margen, y - 6, 26, 26, undefined, 'FAST');
@@ -370,31 +368,22 @@ function generarPDF(cot) {
   lineas.forEach((l, i) => doc.text(l, xTexto, y + 6 + i * 4.5));
 
   doc.setFont('helvetica', 'bold').setFontSize(13).setTextColor(28, 25, 23);
-  doc.text('COTIZACIÓN', ancho - margen, y, { align: 'right' });
+  doc.text(titulo, ancho - margen, y, { align: 'right' });
   doc.setFont('helvetica', 'normal').setFontSize(10);
-  doc.text(cot.numero, ancho - margen, y + 6, { align: 'right' });
+  doc.text(numero, ancho - margen, y + 6, { align: 'right' });
   doc.setFontSize(9).setTextColor(80);
-  doc.text(`Fecha: ${fechaLegible(cot.fecha)}`, ancho - margen, y + 11.5, { align: 'right' });
-  doc.text(`Válida por ${cot.vigencia} días`, ancho - margen, y + 16, { align: 'right' });
+  lineasDerecha.forEach((l, i) => doc.text(l, ancho - margen, y + 11.5 + i * 4.5, { align: 'right' }));
 
   y += 26;
   doc.setDrawColor(185, 28, 28).setLineWidth(0.8);
   doc.line(margen, y, ancho - margen, y);
-  y += 8;
+  return y + 8;
+}
 
-  // Cliente
-  doc.setFontSize(10).setTextColor(28, 25, 23);
-  const filaCliente = (etiqueta, valor) => {
-    doc.setFont('helvetica', 'bold').text(etiqueta, margen, y);
-    doc.setFont('helvetica', 'normal').text(String(valor), margen + 20, y);
-    y += 5;
-  };
-  filaCliente('Cliente:', cot.cliente.nombre);
-  if (cot.cliente.nit) filaCliente('NIT/C.C.:', cot.cliente.nit);
-  if (cot.cliente.telefono) filaCliente('Teléfono:', cot.cliente.telefono);
-  y += 1;
-
-  // Tabla de productos
+// Tabla de productos + bloque de totales. Devuelve la Y final.
+function tablaYTotales(doc, cot, y) {
+  const ancho = doc.internal.pageSize.getWidth();
+  const margen = 15;
   const filas = cot.items.map((it, i) => [
     i + 1,
     it.producto + (it.talla && it.talla !== '—' ? `  (talla ${it.talla})` : ''),
@@ -419,7 +408,6 @@ function generarPDF(cot) {
   });
   y = doc.lastAutoTable.finalY + 6;
 
-  // Totales
   const t = totalesPDF(cot);
   const xEt = ancho - margen - 60;
   const xVal = ancho - margen;
@@ -440,6 +428,32 @@ function generarPDF(cot) {
   if (t.descuento) filaTotal('Descuento', '- ' + dinero(t.descuento));
   if (t.iva) filaTotal(`IVA ${cot.ivaPct}%`, dinero(t.iva));
   filaTotal('TOTAL', dinero(t.total), true);
+  return y;
+}
+
+function generarPDF(cot) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const ancho = doc.internal.pageSize.getWidth();
+  const margen = 15;
+  let y = encabezadoPDF(doc, 'COTIZACIÓN', cot.numero, [
+    `Fecha: ${fechaLegible(cot.fecha)}`,
+    `Válida por ${cot.vigencia} días`,
+  ]);
+
+  // Cliente
+  doc.setFontSize(10).setTextColor(28, 25, 23);
+  const filaCliente = (etiqueta, valor) => {
+    doc.setFont('helvetica', 'bold').text(etiqueta, margen, y);
+    doc.setFont('helvetica', 'normal').text(String(valor), margen + 20, y);
+    y += 5;
+  };
+  filaCliente('Cliente:', cot.cliente.nombre);
+  if (cot.cliente.nit) filaCliente('NIT/C.C.:', cot.cliente.nit);
+  if (cot.cliente.telefono) filaCliente('Teléfono:', cot.cliente.telefono);
+  y += 1;
+
+  y = tablaYTotales(doc, cot, y);
 
   // Notas y condiciones
   y += 4;
@@ -476,21 +490,27 @@ function totalesPDF(cot) {
   return { subtotal, descuento, iva, total: base + iva };
 }
 
+function nombreCliente(cot) {
+  return cot.cliente.nombre.trim().replace(/[^\wáéíóúñÁÉÍÓÚÑ -]/g, '').replace(/\s+/g, '-');
+}
 function nombreArchivo(cot) {
-  const cliente = cot.cliente.nombre.trim().replace(/[^\wáéíóúñÁÉÍÓÚÑ -]/g, '').replace(/\s+/g, '-');
+  const cliente = nombreCliente(cot);
   return `${cot.numero}${cliente ? '-' + cliente : ''}.pdf`;
 }
+function nombreArchivoCC(cot) {
+  const cliente = nombreCliente(cot);
+  return `${cot.numeroCC}${cliente ? '-' + cliente : ''}.pdf`;
+}
 
-async function compartirPDF(cot) {
-  const doc = generarPDF(cot);
+async function compartirDoc(doc, nombre, titulo) {
   const blob = doc.output('blob');
-  const archivo = new File([blob], nombreArchivo(cot), { type: 'application/pdf' });
+  const archivo = new File([blob], nombre, { type: 'application/pdf' });
   if (navigator.canShare && navigator.canShare({ files: [archivo] })) {
     try {
       await navigator.share({
         files: [archivo],
-        title: `Cotización ${cot.numero}`,
-        text: `Cotización ${cot.numero} — ${config.negocio}`,
+        title: titulo,
+        text: `${titulo} — ${config.negocio}`,
       });
       return;
     } catch (e) {
@@ -498,8 +518,143 @@ async function compartirPDF(cot) {
     }
   }
   // Sin Web Share (ej. computador): descarga directa.
-  doc.save(nombreArchivo(cot));
+  doc.save(nombre);
   aviso('PDF descargado. Adjúntalo en WhatsApp o correo.');
+}
+
+async function compartirPDF(cot) {
+  await compartirDoc(generarPDF(cot), nombreArchivo(cot), `Cotización ${cot.numero}`);
+}
+
+// ---------------------------------------------------------------- cuenta de cobro
+// Convierte un total en su valor en letras ("NOVECIENTOS CUARENTA MIL CIEN PESOS M/CTE").
+function numeroALetras(n) {
+  n = Math.round(n);
+  if (!n) return 'CERO PESOS M/CTE';
+  const u = ['', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez',
+    'once', 'doce', 'trece', 'catorce', 'quince', 'dieciséis', 'diecisiete', 'dieciocho', 'diecinueve', 'veinte'];
+  const dec = ['', '', '', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa'];
+  const cen = ['', 'ciento', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos',
+    'seiscientos', 'setecientos', 'ochocientos', 'novecientos'];
+  const tresCifras = (x) => {
+    let s = '';
+    const c = Math.floor(x / 100), du = x % 100, d = Math.floor(du / 10), uu = x % 10;
+    if (c) s = (c === 1 && !du) ? 'cien' : cen[c];
+    if (du) {
+      if (s) s += ' ';
+      if (du <= 20) s += u[du];
+      else if (d === 2) s += { 2: 'veintidós', 3: 'veintitrés', 6: 'veintiséis' }[uu] || 'veinti' + u[uu];
+      else s += dec[d] + (uu ? ' y ' + u[uu] : '');
+    }
+    return s;
+  };
+  // "uno" se apocopa ante mil/millón: veintiún mil, treinta y un mil…
+  const apocope = (s) => s.replace(/veintiuno$/, 'veintiún').replace(/ uno$/, ' un').replace(/^uno$/, 'un');
+  const millones = Math.floor(n / 1e6), miles = Math.floor((n % 1e6) / 1000), resto = n % 1000;
+  const partes = [];
+  if (millones) partes.push(millones === 1 ? 'un millón' : apocope(tresCifras(millones)) + ' millones');
+  if (miles) partes.push(miles === 1 ? 'mil' : apocope(tresCifras(miles)) + ' mil');
+  if (resto) partes.push(tresCifras(resto));
+  return (partes.join(' ') + ' pesos M/CTE').toUpperCase();
+}
+
+// Asigna número y fecha de cuenta de cobro la primera vez (queda fija en el historial).
+function asegurarCC(cot) {
+  if (!cot.numeroCC) {
+    cot.numeroCC = 'CC-' + String(config.consecutivoCC || 1).padStart(4, '0');
+    cot.fechaCC = new Date().toISOString();
+    config.consecutivoCC = (Number(config.consecutivoCC) || 1) + 1;
+    guardar(K.config, config);
+    guardar(K.historial, historial);
+    pintarNegocio();
+    pintarHistorial();
+    respaldarAuto();
+  }
+  return cot;
+}
+
+function generarCC(cot) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const ancho = doc.internal.pageSize.getWidth();
+  const margen = 15;
+  const t = totalesPDF(cot);
+
+  let y = encabezadoPDF(doc, 'CUENTA DE COBRO', cot.numeroCC, [
+    `Fecha: ${fechaLegible(cot.fechaCC)}`,
+    `Ref.: cotización ${cot.numero}`,
+  ]);
+
+  doc.setFont('helvetica', 'normal').setFontSize(10).setTextColor(28, 25, 23);
+  const ciudad = (config.ciudad || '').split(',')[0].trim();
+  doc.text(`${ciudad ? ciudad + ', ' : ''}${fechaLegible(cot.fechaCC)}`, margen, y);
+  y += 12;
+
+  // Cliente DEBE A negocio
+  doc.setFont('helvetica', 'bold').setFontSize(12);
+  doc.text(cot.cliente.nombre, ancho / 2, y, { align: 'center' });
+  doc.setFont('helvetica', 'normal').setFontSize(9.5).setTextColor(80);
+  if (cot.cliente.nit) { y += 5; doc.text(`NIT/C.C.: ${cot.cliente.nit}`, ancho / 2, y, { align: 'center' }); }
+  y += 8;
+  doc.setFontSize(10).setTextColor(28, 25, 23);
+  doc.text('DEBE A:', ancho / 2, y, { align: 'center' });
+  y += 8;
+  doc.setFont('helvetica', 'bold').setFontSize(12);
+  doc.text(config.negocio, ancho / 2, y, { align: 'center' });
+  doc.setFont('helvetica', 'normal').setFontSize(9.5).setTextColor(80);
+  if (config.nit) { y += 5; doc.text(`NIT/C.C.: ${config.nit}`, ancho / 2, y, { align: 'center' }); }
+  y += 10;
+
+  // Suma en números y letras
+  doc.setFont('helvetica', 'bold').setFontSize(10.5).setTextColor(28, 25, 23);
+  doc.text('LA SUMA DE:', margen, y);
+  doc.setFont('helvetica', 'normal');
+  const suma = `${dinero(t.total)} (${numeroALetras(t.total)})`;
+  const sumaPartida = doc.splitTextToSize(suma, ancho - margen * 2 - 28);
+  doc.text(sumaPartida, margen + 28, y);
+  y += sumaPartida.length * 5 + 5;
+
+  doc.setFont('helvetica', 'bold').setFontSize(10);
+  doc.text('POR CONCEPTO DE:', margen, y);
+  y += 4;
+  y = tablaYTotales(doc, cot, y);
+
+  // Condiciones de pago
+  if (config.pie) {
+    y += 4;
+    doc.setFont('helvetica', 'bold').setFontSize(9.5).setTextColor(127, 29, 29);
+    doc.text('Forma de pago', margen, y);
+    y += 4.5;
+    doc.setFont('helvetica', 'normal').setFontSize(9).setTextColor(60);
+    const partido = doc.splitTextToSize(config.pie, ancho - margen * 2);
+    doc.text(partido, margen, y);
+    y += partido.length * 4 + 4;
+  }
+
+  // Firma
+  y = Math.max(y + 18, 210);
+  doc.setDrawColor(28, 25, 23).setLineWidth(0.3);
+  doc.line(margen, y, margen + 70, y);
+  y += 5;
+  doc.setFont('helvetica', 'bold').setFontSize(10).setTextColor(28, 25, 23);
+  doc.text(config.negocio, margen, y);
+  if (config.nit) {
+    y += 5;
+    doc.setFont('helvetica', 'normal').setFontSize(9).setTextColor(80);
+    doc.text(`NIT/C.C.: ${config.nit}`, margen, y);
+  }
+
+  doc.setFontSize(8).setTextColor(150);
+  doc.text(
+    `${config.negocio}${config.telefono ? ' · ' + config.telefono : ''} — ¡Gracias por su confianza!`,
+    ancho / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' },
+  );
+  return doc;
+}
+
+async function compartirCC(cot) {
+  asegurarCC(cot);
+  await compartirDoc(generarCC(cot), nombreArchivoCC(cot), `Cuenta de cobro ${cot.numeroCC}`);
 }
 
 function resumenTexto(cot) {
@@ -555,17 +710,19 @@ function pintarHistorial() {
     div.className = 'tarjeta-cot';
     div.innerHTML = `
       <div class="cabecera">
-        <span class="numero">${escapar(cot.numero)}</span>
+        <span class="numero">${escapar(cot.numero)}${cot.numeroCC ? ' · ' + escapar(cot.numeroCC) : ''}</span>
         <span class="fecha">${fechaLegible(cot.fecha)}</span>
       </div>
       <div class="cliente">${escapar(cot.cliente.nombre)} · <span class="total">${dinero(t.total)}</span></div>
       <div class="botones">
         <button type="button" class="primario" data-a="pdf">📄 PDF</button>
+        <button type="button" class="secundario" data-a="cc">🧾 Cta. cobro</button>
         <button type="button" class="secundario" data-a="editar">✏️ Abrir</button>
         <button type="button" class="secundario" data-a="duplicar">📋 Duplicar</button>
         <button type="button" class="peligro-suave" data-a="borrar">🗑️</button>
       </div>`;
     div.querySelector('[data-a="pdf"]').addEventListener('click', () => compartirPDF(cot));
+    div.querySelector('[data-a="cc"]').addEventListener('click', () => compartirCC(cot));
     div.querySelector('[data-a="editar"]').addEventListener('click', () => {
       actual = JSON.parse(JSON.stringify(cot));
       guardarBorrador();
@@ -669,6 +826,7 @@ function pintarNegocio() {
   $('#cfg-pie').value = config.pie;
   $('#cfg-prefijo').value = config.prefijo;
   $('#cfg-consecutivo').value = config.consecutivo;
+  $('#cfg-consecutivo-cc').value = config.consecutivoCC || 1;
   $('#cfg-logo-vista').hidden = !config.logo;
   if (config.logo) $('#cfg-logo-img').src = config.logo;
   $('#titulo-negocio').textContent = config.negocio || 'Cotizador';
@@ -691,6 +849,7 @@ enlazarConfig('#cfg-pie', 'pie');
 enlazarConfig('#cfg-prefijo', 'prefijo');
 enlazarConfig('#cfg-iva', 'ivaPct', (v) => Math.max(0, Number(v) || 0));
 enlazarConfig('#cfg-consecutivo', 'consecutivo', (v) => Math.max(1, parseInt(v, 10) || 1));
+enlazarConfig('#cfg-consecutivo-cc', 'consecutivoCC', (v) => Math.max(1, parseInt(v, 10) || 1));
 
 $('#cfg-logo').addEventListener('change', async (e) => {
   const archivo = e.target.files[0];

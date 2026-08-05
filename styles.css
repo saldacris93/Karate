@@ -131,7 +131,8 @@ button {
 .tarjeta-cot .fecha { font-size: .78rem; color: var(--gris); }
 .tarjeta-cot .cliente { margin: 4px 0 2px; font-size: .95rem; }
 .tarjeta-cot .total { font-weight: 800; }
-.tarjeta-cot .botones { display: flex; gap: 8px; margin-top: 8px; }
+.tarjeta-cot .botones { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.tarjeta-cot .botones button { flex: 1 1 40%; }
 .tarjeta-cot .botones button { margin: 0; padding: 9px 8px; font-size: .85rem; }
 .vacio { text-align: center; color: var(--gris); padding: 30px 10px; font-size: .9rem; }
 
